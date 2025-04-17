@@ -3,9 +3,6 @@ global:
   sendAnonymousUsage: false
 log:
   level: ERROR
-api:
-  dashboard: true
-  insecure: true
 entryPoints:
   web:
     address: :80
