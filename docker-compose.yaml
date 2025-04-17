@@ -1,0 +1,51 @@
+version: "3.3"
+
+services:
+
+  traefik:
+    image: "traefik:v3.3"
+    container_name: "traefik"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    environment:
+      - CF_DNS_API_TOKEN=${CF_DNS_API_TOKEN}
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - ./config/traefik.yaml:/etc/traefik/traefik.yaml:ro
+      - ./data/certs/:/var/traefik/certs/:rw
+    networks:
+      - frontend
+    restart: unless-stopped
+
+  foundry:
+    image: felddy/foundryvtt:release
+    hostname: my_foundry_host
+    volumes:
+      - type: bind
+        source: ./foundry
+        target: /data
+    environment:
+      - FOUNDRY_PASSWORD=${FOUNDRY_PASSWORD}
+      - FOUNDRY_USERNAME=${FOUNDRY_USERNAME}
+      - FOUNDRY_ADMIN_KEY=${FOUNDRY_ADMIN_KEY}
+    ports:
+      - target: 30000
+        published: 30000
+        protocol: tcp
+    networks:
+      - frontend
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.foundry-http.rule=Host(${FOUNDRY_URL})
+      - traefik.http.routers.foundry-http.entryPoints=web
+      - traefik.http.routers.foundry-https.tls=true
+      - traefik.http.routers.foundry-https.tls.certresolver=cloudflare
+      - traefik.http.routers.foundry-https.rule=Host(${FOUNDRY_URL})
+      - traefik.http.routers.foundry-https.entryPoints=websecure
+    restart: unless-stopped
+
+networks:
+  frontend:
+    external: false
